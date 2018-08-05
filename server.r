@@ -27,7 +27,8 @@ install.packages("lubridate")
 library(mongolite)
 library(lubridate)
 library(MASS)
-
+library(SixSigma,qicharts,qcr);library(spc,IQCC);require(mpcv,spcadjust);library(MSQC,tolerance)
+library(edcc)
   # control chart ---------------------------------------------------------------------
 
   
@@ -49,7 +50,6 @@ plot(xbar.thick,axes.las=1,digits=3,title="X-Bar chart metal plates thickness",x
 
       # MR chart ----------------------------------------------------------------
 
-
 thickness2days<-ss.data.thickness2$thickness[1:24]
 mov.samples<-cbind(thickness2days[1:23],thickness2days[2:24])
 cci<-qcc(thickness2days,type="xbar.one")
@@ -63,6 +63,41 @@ plot(ccmr,add.stats=FALSE)
 cusum.thick<-cusum(data= thickness2days)
 summary(cusum.thick)
 ewma.thick<-ewma(data= thickness2days)
+
+  # Nonlinear Control chart -------------------------------------------------
+
+## The functionsmoothProfilesintheSixSigmapackage makes use of regularization theory in order to smooth the profile
+plot(ss.data.wbx, ss.data.wby[,"P1"],type="l") #require(sixsigma)
+P1.smooth<-smoothProfiles(profiles= ss.data.wby[,"P1"],x= ss.data.wbx)
+plotProfiles(profiles=cbind(P1.smooth,ss.data.wby[,"P1"]),x= ss.data.wbx)
+plotProfiles(profiles= ss.data.wby,x= ss.data.wbx)
+wby.smooth<-smoothProfiles(profiles= ss.data.wby,x= ss.data.wbx)
+plotProfiles(profiles= wby.smooth,x= ss.data.wbx)
+## Phase I & phase II
+
+   ## Phase I,an in-control to test baseline subset of profiles is seeking 
+   ## the stability of the process, in order to model the in-control process performance
+wby.phase1<-ss.data.wby[,1:35]
+wb.limits<-climProfiles(profiles= wby.phase1,x= ss.data.wbx,smoothprof=TRUE,smoothlim=TRUE)
+plotProfiles(profiles= wby.phase1,x= ss.data.wbx,cLimits= wb.limits)
+     ###  function climProfiles calculates confidence bandsand an estimation of the prototype profilef.x/
+wb.out.phase1<-outProfiles(profiles= wby.phase1,x= ss.data.wbx,cLimits= wb.limits)
+     ### function outProfiles returns  a  list  of  three  vectors. 
+     #### The  first  vector(labOut)  contains  the  labels  of  the  out-of-control  profiles.
+     #### The  second  vector(idOut)  contains  the  indexes  of  the  out-of-control  profiles.  
+     #### This  vector  is  givenfor completeness as in some cases the index may be preferable to the label.
+     #### The third vector contains the proportion of times that each profile remains out of theconfidence bands. By default, the function considers a profile to be out of controlif the proportion of times that this profile remains out of the confidence bands isover 0.5. 
+
+
+
+   ## Phase II, the goal is to monitor the process
+   ## For PhaseI is used for the detection of out-of-control profiles over a set of new profiles notpreviously analyzed.
+
+wby.phase2<-ss.data.wby[,36:50]
+wb.out.phase2<-outProfiles(profiles= wby.phase2,x= ss.data.wbx,cLimits= wb.limits,tol=0.8)
+plotProfiles(wby.phase2,x= ss.data.wbx,cLimits= wb.limits,outControl= wb.out.phase2$idOut)
+plotProfiles(wby.phase2,x= ss.data.wbx,cLimits= wb.limits,outControl= wb.out.phase2$idOut,onlyout=TRUE)
+## elimiate glitch
 
 # shiny.ui ----------------------------------------------------------------
 library(shiny)
