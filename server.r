@@ -27,8 +27,8 @@ install.packages("lubridate")
 library(mongolite)
 library(lubridate)
 library(MASS)
-library(SixSigma,qicharts,qcr);library(spc,IQCC);require(mpcv,spcadjust);library(MSQC,tolerance)
-library(edcc)
+library(SixSigma,qicharts);library(spc,IQCC);require(mpcv,spcadjust);library(MSQC,tolerance)
+library(edcc,qcc);require(qcr);require(qualityTools)
   # control chart ---------------------------------------------------------------------
 
   
@@ -47,6 +47,24 @@ plot(xbar.thick)
 qcc.options("beyond.limits"=list(pch=20,col="red3"))
 qcc.options(bg.margin="azure2")
 plot(xbar.thick,axes.las=1,digits=3,title="X-Bar chart metal plates thickness",xlab="Shift",ylab="Sample mean",ylim=c(0.70,0.80))
+   ### process capabilities analysis
+process.capability(xbar.thick,spec.limit =c(0.77,.81)) # xbar CPI , assign specification value
+ss.study.ca(pistonrings$diameter,LSL=73.9,USL=74.1,Target=74) # composite Cpk/Cp/Pk
+cp(x= pistonrings$diameter,lsl=73.9,usl=74.1,target=74) # composite Cp Indcies
+   ### Cause and Effect analysis
+cause.and.effect(cause=list(crushing=c("movement of external axis"),
+shearing=c("end effector failure (separation)"), 
+abrasion= c("robot axes' rotational motion"), entanglement =c("unintended movement of associated
+machine")),effect = "Mechanical hazards")
+
+effect<-"Electrical hazards"
+causes.gr<-c("nonstationary voltage","high voltage","power supply")
+causes<-vector(mode="list",length=length(causes.gr))
+causes[1]<-list(c("atmosphere", "wires"))
+causes[2]<-list(c("electricty unstable"))
+causes[3]<-list(c("electricty unbearable"))
+ss.ceDiag(effect, causes.gr, causes,sub="Electrial hazard Problem")
+
 
       # MR chart ----------------------------------------------------------------
 
@@ -64,9 +82,14 @@ cusum.thick<-cusum(data= thickness2days)
 summary(cusum.thick)
 ewma.thick<-ewma(data= thickness2days)
 
+
+
+
+
+
   # Nonlinear Control chart -------------------------------------------------
 
-## The functionsmoothProfilesintheSixSigmapackage makes use of regularization theory in order to smooth the profile
+## The function smoothProfiles in the SixSigma package makes use of regularization theory in order to smooth the profile
 plot(ss.data.wbx, ss.data.wby[,"P1"],type="l") #require(sixsigma)
 P1.smooth<-smoothProfiles(profiles= ss.data.wby[,"P1"],x= ss.data.wbx)
 plotProfiles(profiles=cbind(P1.smooth,ss.data.wby[,"P1"]),x= ss.data.wbx)
